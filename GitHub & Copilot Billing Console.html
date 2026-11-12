@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GitHub &amp; Copilot Billing Console</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f6f8fa; --surface:#ffffff; --surface-2:#f0f3f6; --surface-3:#e7edf3;
+  --ink:#1c2128; --ink-2:#57606a; --ink-3:#8b949e;
+  --line:#d4dae0; --line-2:#e5e9ed;
+  --accent:#0969da; --accent-ink:#ffffff;
+  --good:#1a7f37; --good-bg:#dafbe1;
+  --warn:#9a6700; --warn-bg:#fff8c5;
+  --bad:#cf222e;  --bad-bg:#ffebe9;
+  --oit:#6639ba;  --oit-bg:#f0e8ff;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  box-sizing:border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0d1117; --surface:#161b22; --surface-2:#1c2330; --surface-3:#222b38;
+    --ink:#e6edf3; --ink-2:#9198a1; --ink-3:#6e7681;
+    --line:#30363d; --line-2:#262c34;
+    --accent:#4493f8; --accent-ink:#0d1117;
+    --good:#3fb950; --good-bg:#12261a;
+    --warn:#d29922; --warn-bg:#2b2412;
+    --bad:#f85149;  --bad-bg:#2d1618;
+    --oit:#a371f7;  --oit-bg:#231a35;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0d1117; --surface:#161b22; --surface-2:#1c2330; --surface-3:#222b38;
+  --ink:#e6edf3; --ink-2:#9198a1; --ink-3:#6e7681;
+  --line:#30363d; --line-2:#262c34;
+  --accent:#4493f8; --accent-ink:#0d1117;
+  --good:#3fb950; --good-bg:#12261a;
+  --warn:#d29922; --warn-bg:#2b2412;
+  --bad:#f85149;  --bad-bg:#2d1618;
+  --oit:#a371f7;  --oit-bg:#231a35;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top: env(safe-area-inset-top, 0px); height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:14px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);
+  background:var(--surface);z-index:40}
+
+/* ---------- shell ---------- */
+header.top{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:30;
+  background:var(--surface); border-bottom:1px solid var(--line);
+}
+.top-in{max-width:1480px;margin:0 auto;padding:14px 20px 0;display:flex;flex-wrap:wrap;
+  align-items:flex-start;gap:16px}
+.brand h1{margin:0;font-size:17px;font-weight:650;letter-spacing:-.01em}
+.brand p{margin:2px 0 0;font-size:12px;color:var(--ink-2)}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pill{font-size:11px;font-family:var(--mono);padding:4px 9px;border-radius:999px;
+  background:var(--surface-3);color:var(--ink-2);border:1px solid var(--line-2);white-space:nowrap}
+nav.tabs{max-width:1480px;margin:0 auto;padding:10px 20px 0;display:flex;gap:2px;
+  overflow-x:auto;scrollbar-width:thin}
+nav.tabs button{
+  appearance:none;border:0;background:transparent;color:var(--ink-2);
+  font:inherit;font-size:13px;padding:9px 13px;border-radius:7px 7px 0 0;cursor:pointer;
+  border-bottom:2px solid transparent;white-space:nowrap;
+}
+nav.tabs button:hover{color:var(--ink);background:var(--surface-2)}
+nav.tabs button[aria-selected="true"]{color:var(--ink);font-weight:600;
+  border-bottom-color:var(--accent);background:var(--surface-2)}
+main{max-width:1480px;margin:0 auto;padding:20px 20px 60px}
+.panel[hidden]{display:none}
+
+/* ---------- blocks ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  padding:16px 18px;margin-bottom:16px}
+.card > h2{margin:0 0 3px;font-size:14px;font-weight:650;letter-spacing:-.005em}
+.card > .sub{margin:0 0 14px;font-size:12px;color:var(--ink-2)}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(185px,1fr))}
+
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.tile .lab{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);
+  font-weight:650}
+.tile .val{font-size:25px;font-weight:650;font-family:var(--mono);margin:7px 0 2px;
+  letter-spacing:-.02em;line-height:1.1}
+.tile .cap{font-size:11.5px;color:var(--ink-3)}
+.tile.good{border-left:3px solid var(--good)}
+.tile.warn{border-left:3px solid var(--warn)}
+.tile.bad{border-left:3px solid var(--bad)}
+.tile.oit{border-left:3px solid var(--oit)}
+
+.banner{border-radius:10px;padding:13px 16px;margin-bottom:16px;font-weight:600;
+  display:flex;align-items:center;gap:10px;font-size:14px;border:1px solid transparent}
+.banner.good{background:var(--good-bg);color:var(--good);border-color:var(--good)}
+.banner.warn{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
+.banner.bad{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
+.banner .dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex:none}
+.banner small{font-weight:400;opacity:.85;margin-left:auto;font-size:12px;text-align:right}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line-2);white-space:nowrap}
+thead th{background:var(--surface-3);font-size:11px;text-transform:uppercase;
+  letter-spacing:.045em;color:var(--ink-2);font-weight:650;position:sticky;top:0;z-index:1}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--surface-2)}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+tr.total td{font-weight:650;background:var(--surface-2);border-top:2px solid var(--line)}
+tr.oitrow td:first-child{box-shadow:inset 3px 0 0 var(--oit)}
+.scroll{max-height:460px;overflow-y:auto}
+.mono{font-family:var(--mono);font-size:12px}
+.muted{color:var(--ink-3)}
+.tag{display:inline-block;font-size:10.5px;font-weight:650;padding:2px 7px;border-radius:999px;
+  font-family:var(--sans);letter-spacing:.02em}
+.tag.good{background:var(--good-bg);color:var(--good)}
+.tag.warn{background:var(--warn-bg);color:var(--warn)}
+.tag.bad{background:var(--bad-bg);color:var(--bad)}
+.tag.oit{background:var(--oit-bg);color:var(--oit)}
+.tag.flat{background:var(--surface-3);color:var(--ink-2)}
+
+/* ---------- controls ---------- */
+label.fld{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--ink-2);font-weight:650;margin-bottom:5px}
+input,select,textarea{
+  font:inherit;font-size:13px;color:var(--ink);background:var(--surface-2);
+  border:1px solid var(--line);border-radius:7px;padding:7px 9px;width:100%;
+}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;
+  border-color:var(--accent)}
+input[type=number]{font-family:var(--mono);text-align:right}
+table input{padding:4px 6px;font-size:12px;border-radius:5px;background:var(--surface)}
+textarea{font-family:var(--mono);font-size:11.5px;line-height:1.45;resize:vertical;min-height:130px}
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);
+  font:inherit;font-size:13px;font-weight:550;padding:7px 14px;border-radius:7px;cursor:pointer;
+  white-space:nowrap}
+.btn:hover{background:var(--surface-3)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.sm{padding:4px 10px;font-size:12px}
+.row{display:flex;gap:9px;flex-wrap:wrap;align-items:flex-end}
+.row > *{flex:0 0 auto}
+.row .grow{flex:1 1 190px;min-width:0}
+.hint{font-size:11.5px;color:var(--ink-3);margin-top:7px}
+.note{font-size:12px;color:var(--ink-2);background:var(--surface-2);border-left:3px solid var(--line);
+  padding:9px 12px;border-radius:0 7px 7px 0;margin-top:12px}
+.note.warn{border-left-color:var(--warn);background:var(--warn-bg);color:var(--warn)}
+.sep{height:1px;background:var(--line-2);margin:16px 0}
+h3.sec{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);
+  font-weight:650;margin:0 0 10px}
+
+/* ---------- charts ---------- */
+.chart{width:100%;height:auto;display:block;overflow:visible}
+.chart text{font-family:var(--sans);fill:var(--ink-2)}
+.chart .lbl{font-size:11px}
+.chart .v{font-size:11px;font-family:var(--mono);fill:var(--ink)}
+.gauge-track{fill:var(--surface-3)}
+.gauge-fill{fill:var(--accent)}
+.gauge-proj{fill:none;stroke:var(--warn);stroke-width:2;stroke-dasharray:4 3}
+
+@media (max-width:640px){
+  main{padding:14px 12px 50px}
+  .top-in{padding:12px 12px 0}
+  nav.tabs{padding:8px 12px 0}
+  .card{padding:13px 14px}
+  .tile .val{font-size:21px}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <h1>GitHub &amp; Copilot Billing Console</h1>
+      <p id="brandSub">Enterprise billing, AI credits, metered usage and chargeback</p>
+    </div>
+    <div class="top-right">
+      <span class="pill" id="pillPeriod">period</span>
+      <span class="pill" id="pillRows">0 usage rows</span>
+      <span class="pill" id="pillUsers">0 users</span>
+      <button class="btn sm" id="btnTheme" title="Toggle light and dark">Theme</button>
+      <button class="btn sm" id="btnReset" title="Clear stored data and reload the seed">Reset</button>
+    </div>
+  </div>
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+</header>
+
+<main>
+  <section class="panel" id="p-overview"></section>
+  <section class="panel" id="p-ai" hidden></section>
+  <section class="panel" id="p-usage" hidden></section>
+  <section class="panel" id="p-users" hidden></section>
+  <section class="panel" id="p-centres" hidden></section>
+  <section class="panel" id="p-chargeback" hidden></section>
+  <section class="panel" id="p-rates" hidden></section>
+  <section class="panel" id="p-estimate" hidden></section>
+</main>
+
+<script>
+/* =====================================================================
+   GitHub billing schema — canonical field names are preserved verbatim.
+   Usage report:  date, product, sku, quantity, unit_type,
+                  applied_cost_per_quantity, gross_amount, discount_amount,
+                  net_amount, organization, repository, username,
+                  cost_center_name
+   AI usage:      included_credits, additional_credits, gross_amount,
+                  additional_usage
+   Copilot prev.: model, exceeds_quota, aic_quantity, aic_gross_amount
+   ===================================================================== */
+
+const USAGE_FIELDS = {
+  date:                      ['date'],
+  product:                   ['product'],
+  sku:                       ['sku'],
+  quantity:                  ['quantity'],
+  unit_type:                 ['unittype','unit_type'],
+  applied_cost_per_quantity: ['appliedcostperquantity','priceperunit','priceperunitusd','unitprice'],
+  gross_amount:              ['grossamount','grossamountusd'],
+  discount_amount:           ['discountamount','discountamountusd'],
+  net_amount:                ['netamount','netamountusd'],
+  organization:              ['organization','organizationname','org'],
+  repository:                ['repository','repositoryname','repo'],
+  username:                  ['username','user','actor','githublogin','login'],
+  cost_center_name:          ['costcentername','costcenter','costcentre','costcenters'],
+  model:                     ['model'],
+  exceeds_quota:             ['exceedsquota'],
+  aic_quantity:              ['aicquantity','aicredits','mtdaicredits'],
+  aic_gross_amount:          ['aicgrossamount']
+};
+
+const USER_FIELDS = {
+  username:          ['githublogin','username','login','user'],
+  enterprise_teams:  ['enterpriseteams','enterpriseteam','teams','team'],
+  cost_center_name:  ['costcenters','costcenter','costcentername','costcentre'],
+  effective_budget:  ['effectivebudget','effectivebudgetmo','budget'],
+  budget_source:     ['budgetsource','source'],
+  mtd_spend:         ['mtdspend','mtdspendusd','monthtodatespend'],
+  spend_28d:         ['28dayspend','28dayspendusd','spend28d'],
+  aic_quantity:      ['mtdaicredits','aicredits','aicquantity'],
+  active_days:       ['activedays','activedays28d'],
+  last_active:       ['lastactive'],
+  interactions:      ['interactions','interactions28d'],
+  used_agent:        ['usedagent'],
+  used_chat:         ['usedchat'],
+  ides:              ['ides','ide']
+};
+
+const norm = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
+
+function buildMap(headers, dict){
+  const map = {};
+  headers.forEach((h, i) => {
+    const n = norm(h);
+    for (const [canon, alts] of Object.entries(dict)){
+      if (map[canon] !== undefined) continue;
+      if (alts.includes(n)) { map[canon] = i; break; }
+    }
+  });
+  return map;
+}
+
+/* ---------- delimited parsing (CSV or TSV, quote-aware) ---------- */
+function parseDelimited(text){
+  text = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').trim();
+  if (!text) return [];
+  const head = text.slice(0, text.indexOf('\n') < 0 ? text.length : text.indexOf('\n'));
+  const delim = (head.split('\t').length > head.split(',').length) ? '\t' : ',';
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (q){
+      if (c === '"'){ if (text[i+1] === '"'){ cell += '"'; i++; } else q = false; }
+      else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === delim){ row.push(cell); cell = ''; }
+    else if (c === '\n'){ row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += c;
+  }
+  row.push(cell); rows.push(row);
+  return rows.filter(r => r.some(v => String(v).trim() !== ''));
+}
+
+const toNum = v => {
+  if (v === null || v === undefined) return 0;
+  const n = parseFloat(String(v).replace(/[$,\s%]/g, ''));
+  return isFinite(n) ? n : 0;
+};
+const toBool = v => /^(true|yes|y|1)$/i.test(String(v == null ? '' : v).trim());
+
+/* ===================== seed reference data ===================== */
+const SEED_SKUS = [
+  ['github_platform','ghec_licenses','GitHub Enterprise Cloud licence','user-months',21,'Seat'],
+  ['github_platform','github_team','GitHub Team','user-months',4,'Seat'],
+  ['copilot','copilot_for_business','Copilot Business seat','user-months',19,'Seat'],
+  ['copilot','copilot_enterprise','Copilot Enterprise seat','user-months',39,'Seat'],
+  ['ghas','ghas_secret_protection_licenses','GitHub Secret Protection','committer-months',19,'Seat'],
+  ['ghas','ghas_code_security_licenses','GitHub Code Security','committer-months',30,'Seat'],
+  ['code_quality','code_quality_licenses','GitHub Code Quality','committer-months',10,'Seat'],
+  ['copilot','copilot_ai_credit','Copilot AI credits','ai-credits',0.01,'AI'],
+  ['copilot','copilot_premium_request','Copilot premium request','requests',0.04,'AI'],
+  ['copilot','coding_agent_ai_credit','Coding agent AI credits','ai-credits',0.01,'AI'],
+  ['code_quality','code_quality_ai_credit','Code Quality AI credits','ai-credits',0.01,'AI'],
+  ['spark','spark_ai_credit','GitHub Spark AI credits','ai-credits',0.01,'AI'],
+  ['models','models_inference','GitHub Models inference','million-tokens',1,'AI'],
+  ['actions','actions_linux_slim','Linux 1-core x64','minutes',0.002,'Metered'],
+  ['actions','actions_linux','Linux 2-core x64 (ubuntu-latest)','minutes',0.006,'Metered'],
+  ['actions','actions_linux_arm','Linux 2-core arm64','minutes',0.005,'Metered'],
+  ['actions','actions_windows','Windows 2-core x64','minutes',0.01,'Metered'],
+  ['actions','actions_macos','macOS 3 or 4-core','minutes',0.062,'Metered'],
+  ['actions','actions_self_hosted_linux','Self-hosted Linux runner','minutes',0,'Metered'],
+  ['actions','actions_linux_4_core','Linux 4-core','minutes',0.012,'Metered'],
+  ['actions','actions_linux_8_core','Linux 8-core','minutes',0.022,'Metered'],
+  ['actions','actions_linux_16_core','Linux 16-core','minutes',0.042,'Metered'],
+  ['actions','actions_linux_32_core','Linux 32-core','minutes',0.082,'Metered'],
+  ['actions','actions_linux_64_core','Linux 64-core','minutes',0.162,'Metered'],
+  ['actions','actions_windows_4_core','Windows 4-core','minutes',0.022,'Metered'],
+  ['actions','actions_windows_8_core','Windows 8-core','minutes',0.042,'Metered'],
+  ['actions','actions_windows_16_core','Windows 16-core','minutes',0.082,'Metered'],
+  ['actions','actions_macos_l','macOS 12-core','minutes',0.077,'Metered'],
+  ['actions','actions_macos_xl','macOS 5-core M2 Pro','minutes',0.102,'Metered'],
+  ['actions','actions_linux_4_core_arm','Linux 4-core arm64','minutes',0.008,'Metered'],
+  ['actions','actions_linux_8_core_arm','Linux 8-core arm64','minutes',0.014,'Metered'],
+  ['actions','actions_linux_4_core_gpu','Linux 4-core GPU','minutes',0.052,'Metered'],
+  ['actions','actions_storage','Actions artifact and log storage','gigabyte-hours',0.000342,'Metered'],
+  ['actions','actions_cache_storage','Actions cache storage','gigabyte-hours',0.0000959,'Metered'],
+  ['packages','packages_storage','Packages storage','gigabyte-hours',0.000342,'Metered'],
+  ['packages','packages_bandwidth','Packages data transfer out','gigabytes',0.5,'Metered'],
+  ['git_lfs','git_lfs_storage','Git LFS storage','gigabyte-hours',0.0000959,'Metered'],
+  ['git_lfs','git_lfs_bandwidth','Git LFS download bandwidth','gigabytes',0.0875,'Metered'],
+  ['codespaces','codespaces_compute_d2','Codespaces compute 2-core','hours',0.18,'Metered'],
+  ['codespaces','codespaces_compute_d4','Codespaces compute 4-core','hours',0.36,'Metered'],
+  ['codespaces','codespaces_compute_d8','Codespaces compute 8-core','hours',0.72,'Metered'],
+  ['codespaces','codespaces_compute_d16','Codespaces compute 16-core','hours',1.44,'Metered'],
+  ['codespaces','codespaces_storage','Codespaces storage','gigabyte-months',0.07,'Metered'],
+  ['sandbox','sandbox_linux','Copilot cloud sandbox compute','compute-seconds',0.000024,'Metered'],
+  ['sandbox','sandbox_memory','Copilot cloud sandbox memory','GiB-seconds',0.000003,'Metered'],
+  ['sandbox','sandbox_snapshot','Copilot sandbox snapshot storage','GiB-months',0.005,'Metered']
+].map(r => ({product:r[0], sku:r[1], description:r[2], unit_type:r[3],
+             list_rate:r[4], billing_class:r[5]}));
+
+const SEED_CENTRES = [
+  ['Power Users','Enterprise Team','1 Enterprise Team','OU',200,196596.64,1949.70,0,0],
+  ['CMS-Enterprise','Organization','1 Organization','OU',0,127525.69,1269.28,0,0],
+  ['CMCS','Organization','1 Organization','OU',0,98601.82,977.16,0,0],
+  ['OC-USERS','Enterprise Team','1 Enterprise Team','OIT',19,54161.38,541.09,50954,263910],
+  ['QPP','Enterprise Team','1 Enterprise Team','OU',0,10599.12,105.45,0,0],
+  ['Premium-Copilot','Enterprise Team','1 Enterprise Team','OU',1000,9375.29,89.51,0,0],
+  ['OIT-SharedService','Mixed','2 Enterprise Teams, 1 User','OIT',0,3369.55,33.70,0,0],
+  ['CPI-UCM','Organization','1 Organization','OU',0,174.78,1.75,0,0],
+  ['CMSGOV','Organization','1 Organization','OU',0,130.58,1.31,0,0],
+  ['MITG-MSI','Enterprise Team','1 Enterprise Team','OU',0,0,0,0,0],
+  ['OC-CoPilot-ENT','Enterprise Team','1 Enterprise Team','OIT',0,0,0,0,0],
+  ['OC-REPOS','Repositories','558 Repositories','OIT',0,0,0,0,0],
+  ['OHTP','Enterprise Team','1 Enterprise Team','OU',0,0,0,0,0]
+].map(r => ({cost_center_name:r[0], scope_type:r[1], scope_detail:r[2], funding_tier:r[3],
+             ai_credit_budget:r[4], included_credits:r[5], gross_amount:r[6],
+             additional_credits:0, additional_usage:0,
+             pool_used:r[7], pool_limit:r[8], monthly_budget:0}));
+
+const SEED_AI_PRODUCT = [
+  {product:'Copilot', included_credits:497427.36, additional_credits:0, gross_amount:4937.49, additional_usage:0},
+  {product:'Code Quality', included_credits:2985.89, additional_credits:0, gross_amount:29.57, additional_usage:0}
+];
+
+const SEED_AI_MODEL = ['Auto: GPT-6.1 Sol','Claude Opus 5.5','Claude Sonnet 5.5',
+  'Code Review model','GPT-6.1 Sol','All other']
+  .map(m => ({model:m, included_credits:0, additional_credits:0, gross_amount:0, additional_usage:0}));
+
+const SEED_SOURCES = [
+  ['Cost center: Premium-Copilot',1000,3,510.59,0],
+  ['Cost center: Power Users',200,103,2436.53,0],
+  ['Cost center: OC-USERS',19,83,199.59,0],
+  ['Cost center: OC-USERS (also in Power Users)',19,22,172.09,1],
+  ['Enterprise default',19,682,1145.05,0],
+  ['Enterprise default (cost center OHTP has no AI-credit budget)',19,2,0,0],
+  ['Enterprise default (cost center OIT-SharedService has no AI-credit budget)',19,7,11.05,0],
+  ['Enterprise default (cost center QPP has no AI-credit budget)',19,28,44.35,0]
+].map(r => ({budget_source:r[0], effective_budget:r[1], active_users:r[2],
+             mtd_spend:r[3], at_over:r[4]}));
+
+const SEED_USERS = [
+  ['brentthayer1',45.11,58.30,8,'2026-11-09',319,1,1,'vscode'],
+  ['JasonLin0991',20.48,25.98,8,'2026-11-09',0,0,0,''],
+  ['fruiz7',20.42,29.19,6,'2026-11-09',24,0,1,'vscode'],
+  ['mrifat0406',19.00,38.04,9,'2026-11-09',33,1,1,'vscode'],
+  ['adebabs-esimplicity',19.00,30.60,17,'2026-11-09',565,1,1,'vscode'],
+  ['cemcshane',19.00,19.00,7,'2026-11-09',407,1,1,'vscode'],
+  ['mbritt-stratiform',19.00,27.05,14,'2026-11-09',134,1,1,'vscode'],
+  ['mnakka6',19.00,27.21,25,'2026-11-09',439,1,1,'intellij, vscode'],
+  ['gebre-dcca',19.00,38.00,16,'2026-11-09',45,1,1,'intellij'],
+  ['CTA0-esimplicity',19.00,31.93,18,'2026-11-09',118,1,1,'intellij, pycharm'],
+  ['VUZS-ES',19.00,38.00,20,'2026-11-09',541,1,1,'pycharm, vscode'],
+  ['la35-esimplicity',19.00,38.00,10,'2026-11-09',0,0,0,'vscode'],
+  ['B56S-ES',19.00,38.00,17,'2026-11-09',737,1,1,'intellij, pycharm'],
+  ['Alex-MNVQ',19.00,29.72,15,'2026-11-09',12,0,1,'eclipse'],
+  ['davidcarek-fp',19.00,23.76,18,'2026-11-09',71,1,1,'vscode'],
+  ['ikrasniakdcca',19.00,22.51,13,'2026-11-09',68,0,1,'eclipse'],
+  ['jeremyhwu',19.00,19.00,1,'2026-11-03',1,1,1,'vscode'],
+  ['abghandour',19.00,22.95,5,'2026-11-09',0,0,0,''],
+  ['BAHL-esimplicity',19.00,20.52,8,'2026-11-09',71,1,1,'vscode'],
+  ['nickjg231',19.00,19.05,17,'2026-11-09',221,1,1,'vscode']
+].map(r => ({username:r[0], enterprise_teams:'ent:power-users', cost_center_name:'Power Users',
+             effective_budget:200, budget_source:'Cost center: Power Users',
+             mtd_spend:r[1], spend_28d:r[2], active_days:r[3], last_active:r[4],
+             interactions:r[5], used_agent:!!r[6], used_chat:!!r[7], ides:r[8]}));
+
+const SEED_SETTINGS = {
+  enterprise:'centers-for-medicare-medicaid-services',
+  period:'2026-11', period_start:'2026-11-01', as_at:'2026-11-10',
+  discount:0.25, credit_price:0.01,
+  pool_consumed:500359, pool_entitlement:4502873, additional_usage:0,
+  ent_default_budget:19, trigger_pct:0.80, target_team:'ent:power-users',
+  reported_active_users:930, reported_mtd_spend:4519.25, reported_28d_spend:9481.36,
+  automation_added:23, automation_failed:0, automation_manual:4, automation_uplifted:21
+};
+
+const SEED_ESTIMATE = {
+  plan:'GitHub Enterprise Cloud',
+  seats:{ghec_licenses:250, copilot_for_business:200, copilot_enterprise:0,
+         ghas_secret_protection_licenses:150, ghas_code_security_licenses:150,
+         code_quality_licenses:0},
+  usage:{actions_linux:120000, actions_windows:15000, actions_macos:2000,
+         actions_linux_4_core:8000, packages_bandwidth:300, git_lfs_bandwidth:600,
+         codespaces_compute_d4:500, copilot_ai_credit:450000},
+  term:12, contingency:0.10
+};
+
+const PLAN_ALLOWANCE = {
+  'GitHub Free':            {actions_linux:2000,  packages_bandwidth:1,   git_lfs_bandwidth:10},
+  'GitHub Team':            {actions_linux:3000,  packages_bandwidth:10,  git_lfs_bandwidth:250},
+  'GitHub Enterprise Cloud':{actions_linux:50000, packages_bandwidth:100, git_lfs_bandwidth:250}
+};
+const CREDITS_PER_SEAT = {copilot_for_business:1900, copilot_enterprise:3900};
+
+/* ===================== state + storage ===================== */
+const KEY = 'ghbilling.v1';
+let S;
+
+function seed(){
+  return {
+    settings: {...SEED_SETTINGS},
+    skus: SEED_SKUS.map(o => ({...o})),
+    centres: SEED_CENTRES.map(o => ({...o})),
+    aiProduct: SEED_AI_PRODUCT.map(o => ({...o})),
+    aiModel: SEED_AI_MODEL.map(o => ({...o})),
+    sources: SEED_SOURCES.map(o => ({...o})),
+    users: SEED_USERS.map(o => ({...o})),
+    usage: [],
+    estimate: JSON.parse(JSON.stringify(SEED_ESTIMATE))
+  };
+}
+function load(){
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return seed();
+    const v = JSON.parse(raw);
+    const base = seed();
+    return {...base, ...v, settings:{...base.settings, ...(v.settings||{})},
+            estimate:{...base.estimate, ...(v.estimate||{})}};
+  } catch(e){ return seed(); }
+}
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){}
+}
+
+/* ===================== formatting ===================== */
+const fmtM  = n => (n<0?'-':'') + '$' + Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtM0 = n => (n<0?'-':'') + '$' + Math.abs(Math.round(n)).toLocaleString('en-US');
+const fmtN  = n => Math.round(n).toLocaleString('en-US');
+const fmtN2 = n => n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtP  = n => (n*100).toFixed(1) + '%';
+const fmtR  = n => '$' + n.toLocaleString('en-US',{minimumFractionDigits:n<0.01?6:4,maximumFractionDigits:6});
+const esc   = s => String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ===================== derived model ===================== */
+function rateFor(sku){
+  const r = S.skus.find(x => x.sku === sku);
+  return r ? r.list_rate * (1 - S.settings.discount) : 0;
+}
+function classFor(sku){
+  const r = S.skus.find(x => x.sku === sku);
+  return r ? r.billing_class : 'Unknown';
+}
+function daysIn(p){ const [y,m] = p.split('-').map(Number); return new Date(y, m, 0).getDate(); }
+function daysElapsed(){
+  const d = new Date(S.settings.as_at + 'T00:00:00');
+  return isNaN(d) ? 1 : Math.max(1, d.getDate());
+}
+
+function compute(){
+  const st = S.settings;
+  const dim = daysIn(st.period), de = Math.min(daysElapsed(), dim);
+
+  // ---- AI credit pool
+  const poolUtil   = st.pool_entitlement ? st.pool_consumed / st.pool_entitlement : 0;
+  const runRate    = st.pool_consumed / de;
+  const projected  = runRate * dim;
+  const projUtil   = st.pool_entitlement ? projected / st.pool_entitlement : 0;
+  const projOver   = Math.max(0, projected - st.pool_entitlement);
+  const projSpend  = projOver * st.credit_price;
+
+  // ---- AI by cost centre
+  const aiCredits  = S.centres.reduce((a,c) => a + (+c.included_credits||0), 0);
+  const aiGross    = S.centres.reduce((a,c) => a + (+c.gross_amount||0), 0);
+  const aiOitGross = S.centres.filter(c=>c.funding_tier==='OIT').reduce((a,c)=>a+(+c.gross_amount||0),0);
+  const aiOuGross  = aiGross - aiOitGross;
+
+  // ---- usage rollups (GitHub schema fields)
+  const byClass = {Seat:0, Metered:0, AI:0, Unknown:0};
+  const byProduct = {}, byCentre = {};
+  let gross = 0, discount = 0, net = 0, checkFails = 0;
+  S.usage.forEach(u => {
+    const cls = classFor(u.sku);
+    byClass[cls] = (byClass[cls]||0) + (+u.net_amount||0);
+    byProduct[u.product] = (byProduct[u.product]||0) + (+u.net_amount||0);
+    const cc = u.cost_center_name || '(unallocated)';
+    byCentre[cc] = byCentre[cc] || {Seat:0, Metered:0, AI:0};
+    byCentre[cc][cls === 'Unknown' ? 'Metered' : cls] += (+u.net_amount||0);
+    gross += (+u.gross_amount||0); discount += (+u.discount_amount||0); net += (+u.net_amount||0);
+    const expect = (+u.quantity||0) * (+u.applied_cost_per_quantity||0);
+    if (Math.abs(expect - (+u.gross_amount||0)) > 0.05) checkFails++;
+  });
+
+  // ---- per-user budgets
+  const trigAmt = st.ent_default_budget * st.trigger_pct;
+  const users = S.users.map(u => {
+    const budget = +u.effective_budget || 0;
+    const mtd = +u.mtd_spend || 0;
+    const pct = budget ? mtd / budget : 0;
+    const status = pct >= 1 ? 'At/over 100%' : pct >= 0.9 ? '90-99%' : pct >= 0.8 ? '80-89%' : 'Normal';
+    return {...u, pct, remaining: budget - mtd,
+            aic_quantity: st.credit_price ? mtd / st.credit_price : 0,
+            status,
+            trigger: budget <= st.ent_default_budget && mtd >= trigAmt,
+            has_team: !!String(u.enterprise_teams||'').trim()};
+  });
+  const over100 = users.filter(u=>u.status==='At/over 100%').length;
+  const b90 = users.filter(u=>u.status==='90-99%').length;
+  const b80 = users.filter(u=>u.status==='80-89%').length;
+  const noTeam = users.filter(u=>!u.has_team).length;
+  const triggered = users.filter(u=>u.trigger).length;
+  const userMtd = users.reduce((a,u)=>a+(+u.mtd_spend||0),0);
+  const user28 = users.reduce((a,u)=>a+(+u.spend_28d||0),0);
+
+  const targetBudget = (S.centres.find(c=>c.cost_center_name==='Power Users')||{}).ai_credit_budget || 0;
+  const uplift = Math.max(0, targetBudget - st.ent_default_budget);
+  const exposure = (+st.automation_uplifted||0) * uplift;
+
+  // ---- chargeback
+  const chargeback = S.centres.map(c => {
+    const u = byCentre[c.cost_center_name] || {Seat:0, Metered:0, AI:0};
+    const total = u.Seat + u.Metered + (+c.gross_amount||0);
+    const budget = +c.monthly_budget || 0;
+    return {...c, seat:u.Seat, metered:u.Metered, ai:+c.gross_amount||0, total, budget,
+            pctBudget: budget ? total/budget : 0,
+            status: !budget ? 'No budget set' : total > budget ? 'Over budget'
+                    : total > 0.9*budget ? 'Near limit' : 'Within budget'};
+  });
+  const unalloc = (byCentre['(unallocated)'] || {Seat:0,Metered:0,AI:0});
+  const unallocTotal = unalloc.Seat + unalloc.Metered + unalloc.AI;
+
+  const billed = byClass.Seat + byClass.Metered + st.additional_usage;
+
+  return {dim, de, poolUtil, runRate, projected, projUtil, projOver, projSpend,
+          aiCredits, aiGross, aiOitGross, aiOuGross, byClass, byProduct, byCentre,
+          gross, discount, net, checkFails, users, over100, b90, b80, noTeam, triggered,
+          userMtd, user28, trigAmt, uplift, exposure, chargeback, unallocTotal, billed};
+}
+
+/* ===================== small chart helpers ===================== */
+function barChart(rows, opts){
+  opts = opts || {};
+  const fmt = opts.fmt || fmtM0;
+  const vals = rows.map(r => r.v);
+  const max = Math.max(1, ...vals);
+  const rowH = 24, padL = opts.padL || 160, padR = 80, w = 640;
+  const h = rows.length * rowH + 8;
+  let out = `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(opts.title||'chart')}">`;
+  rows.forEach((r, i) => {
+    const y = i * rowH + 4, bw = Math.max(1, (r.v / max) * (w - padL - padR));
+    const col = r.color || 'var(--accent)';
+    out += `<text class="lbl" x="${padL-8}" y="${y+12}" text-anchor="end">${esc(r.k)}</text>`;
+    out += `<rect x="${padL}" y="${y+2}" width="${bw}" height="13" rx="2.5" fill="${col}"/>`;
+    out += `<text class="v" x="${padL+bw+7}" y="${y+13}">${fmt(r.v)}</text>`;
+  });
+  return out + '</svg>';
+}
+function poolGauge(util, projUtil){
+  const w = 640, h = 44, bh = 16, y = 12;
+  const fill = Math.min(1, Math.max(0, util)) * w;
+  const proj = Math.min(1, Math.max(0, projUtil)) * w;
+  return `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="AI credit pool">
+    <rect class="gauge-track" x="0" y="${y}" width="${w}" height="${bh}" rx="8"/>
+    <rect class="gauge-fill"  x="0" y="${y}" width="${fill}" height="${bh}" rx="8"/>
+    <line class="gauge-proj" x1="${proj}" y1="${y-6}" x2="${proj}" y2="${y+bh+6}"/>
+    <text class="v" x="4" y="9">${fmtP(util)} used</text>
+    <text class="v" x="${w-4}" y="9" text-anchor="end">${fmtP(projUtil)} projected</text>
+  </svg>`;
+}
+
+/* ===================== rendering ===================== */
+const TABS = [
+  ['overview','Overview'], ['ai','AI usage'], ['usage','Usage data'],
+  ['users','User budgets'], ['centres','Cost centres'], ['chargeback','Chargeback'],
+  ['rates','Rate card'], ['estimate','Estimator']
+];
+let active = 'overview';
+
+function renderTabs(){
+  document.getElementById('tabs').innerHTML = TABS.map(([id,label]) =>
+    `<button role="tab" data-tab="${id}" aria-selected="${id===active}">${label}</button>`).join('');
+}
+function renderChrome(){
+  const st = S.settings, d = compute();
+  document.getElementById('brandSub').textContent =
+    `Enterprise ${st.enterprise} · ${st.period} · day ${d.de} of ${d.dim}`;
+  document.getElementById('pillPeriod').textContent = st.period + ' · ' + fmtP(st.discount) + ' off list';
+  document.getElementById('pillRows').textContent = fmtN(S.usage.length) + ' usage rows';
+  document.getElementById('pillUsers').textContent = fmtN(S.users.length) + ' users';
+}
+
+/* ---------- Overview ---------- */
+function viewOverview(d){
+  const st = S.settings;
+  const cls = d.projUtil > 1 ? 'bad' : d.projUtil > 0.85 ? 'warn' : 'good';
+  const msg = d.projUtil > 1 ? 'Over pool — overage expected before the period ends'
+            : d.projUtil > 0.85 ? 'Watch — tracking close to the pool limit'
+            : 'On track — the pool covers projected usage';
+
+  const prodRows = Object.entries(d.byProduct).filter(([,v])=>v>0)
+    .sort((a,b)=>b[1]-a[1]).map(([k,v])=>({k, v}));
+  const ccRows = S.centres.filter(c=>c.included_credits>0)
+    .sort((a,b)=>b.included_credits-a.included_credits)
+    .map(c => ({k:c.cost_center_name, v:c.included_credits,
+                color: c.funding_tier==='OIT' ? 'var(--oit)' : 'var(--accent)'}));
+
+  return `
+  <div class="banner ${cls}"><span class="dot"></span>${msg}
+    <small>${fmtN(st.pool_consumed)} of ${fmtN(st.pool_entitlement)} credits · resets after ${st.period}</small></div>
+
+  <div class="grid g4" style="margin-bottom:16px">
+    ${tile('Pool utilisation', fmtP(d.poolUtil), `of ${fmtN(st.pool_entitlement)} credits`, cls)}
+    ${tile('Projected utilisation', fmtP(d.projUtil), 'run-rate, at period end', cls)}
+    ${tile('Total billed', fmtM0(d.billed), 'invoiced by GitHub')}
+    ${tile('Total cost of service', fmtM0(d.billed + d.aiGross), 'billed plus notional')}
+  </div>
+  <div class="grid g4" style="margin-bottom:16px">
+    ${tile('Active Copilot users', fmtN(S.users.length), 'rows loaded on User budgets')}
+    ${tile('Users at or over budget', fmtN(d.over100), 'capped — escalate', d.over100?'bad':'good')}
+    ${tile('No enterprise team', fmtN(d.noTeam), 'on the enterprise default', d.noTeam?'warn':'good')}
+    ${tile('Automation exposure', fmtM0(d.exposure), 'max added spend this period', 'warn')}
+  </div>
+
+  <div class="card">
+    <h2>AI credit pool</h2>
+    <p class="sub">Included credits consumed against the monthly entitlement, with the run-rate projection marked.</p>
+    ${poolGauge(d.poolUtil, d.projUtil)}
+    <div class="grid g3" style="margin-top:14px">
+      ${mini('Run rate', fmtN(d.runRate) + ' / day')}
+      ${mini('Projected at period end', fmtN(d.projected) + ' credits')}
+      ${mini('Projected overage', d.projOver>0 ? fmtM(d.projSpend) : 'None')}
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <h2>AI credits by cost centre</h2>
+      <p class="sub">Purple bars are centres funded centrally by OIT.</p>
+      ${ccRows.length ? barChart(ccRows,{fmt:fmtN,padL:150}) : '<p class="muted">No AI usage loaded.</p>'}
+    </div>
+    <div class="card">
+      <h2>Net spend by product</h2>
+      <p class="sub">From imported usage rows, using the net_amount field.</p>
+      ${prodRows.length ? barChart(prodRows,{padL:140})
+        : '<p class="muted">No usage rows imported yet. Open the Usage data tab to paste the usage report.</p>'}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>What GitHub bills this period</h2>
+    <div class="tw"><table>
+      <thead><tr><th>Line</th><th class="num">Amount</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td>Seat licences (net_amount)</td><td class="num">${fmtM(d.byClass.Seat)}</td><td class="muted">Usage data</td></tr>
+        <tr><td>Metered usage (net_amount)</td><td class="num">${fmtM(d.byClass.Metered)}</td><td class="muted">Usage data</td></tr>
+        <tr><td>AI additional_usage</td><td class="num">${fmtM(st.additional_usage)}</td><td class="muted">AI usage</td></tr>
+        <tr class="total"><td>Total billed</td><td class="num">${fmtM(d.billed)}</td><td></td></tr>
+        <tr><td>AI gross_amount covered by the pool</td><td class="num">${fmtM(d.aiGross)}</td><td class="muted">AI usage</td></tr>
+        <tr class="total"><td>Total cost of service</td><td class="num">${fmtM(d.billed + d.aiGross)}</td><td></td></tr>
+      </tbody></table></div>
+    <div class="note"><strong>gross_amount</strong> is the notional value of included credits consumed — the pool
+      covers it and nothing is invoiced. <strong>additional_usage</strong> is spend beyond the pool, which is what
+      GitHub actually bills.</div>
+  </div>
+
+  <div class="card">
+    <h2>Funding split</h2>
+    <div class="grid g3">
+      ${mini('Funded centrally by OIT', fmtM(d.aiOitGross), 'oit')}
+      ${mini('Recoverable from OUs', fmtM(d.aiOuGross + d.byClass.Seat + d.byClass.Metered), 'good')}
+      ${mini('Unallocated usage rows', fmtM(d.unallocTotal), d.unallocTotal>0?'bad':'')}
+    </div>
+    <div class="note">Funding tier is set per cost centre and was inferred from naming. Confirm it on the
+      Cost centres tab before any chargeback leaves your desk.</div>
+  </div>`;
+}
+const tile = (lab,val,cap,cls='') =>
+  `<div class="tile ${cls}"><div class="lab">${esc(lab)}</div><div class="val">${val}</div><div class="cap">${esc(cap||'')}</div></div>`;
+const mini = (lab,val,cls='') =>
+  `<div class="tile ${cls}" style="padding:11px 13px"><div class="lab">${esc(lab)}</div><div class="val" style="font-size:18px">${val}</div></div>`;
+
+/* ---------- AI usage ---------- */
+function viewAI(d){
+  const st = S.settings;
+  const sum = arr => arr.reduce((a,x)=>a+(+x.included_credits||0),0);
+  const sumG = arr => arr.reduce((a,x)=>a+(+x.gross_amount||0),0);
+  const pTot = sum(S.aiProduct), cTot = sum(S.centres), mTot = sum(S.aiModel);
+  const tieRow = (label, v) => {
+    const diff = v - st.pool_consumed;
+    const ok = v === 0 ? null : Math.abs(diff) <= 0.01 * st.pool_consumed;
+    return `<tr><td>${esc(label)}</td><td class="num">${fmtN2(v)}</td>
+      <td class="num">${v?fmtN2(diff):'—'}</td>
+      <td><span class="tag ${ok===null?'flat':ok?'good':'bad'}">${ok===null?'Not entered':ok?'Ties':'Check'}</span></td></tr>`;
+  };
+
+  return `
+  <div class="card">
+    <h2>Enterprise AI credit pool</h2>
+    <p class="sub">Billing and licensing › Usage › AI usage — the panel at the top of the page.</p>
+    <div class="row">
+      ${num('pool_consumed','Included credits consumed',st.pool_consumed,'settings')}
+      ${num('pool_entitlement','Included credit entitlement',st.pool_entitlement,'settings')}
+      ${num('additional_usage','Additional usage billed ($)',st.additional_usage,'settings',0.01)}
+      ${num('credit_price','Price per AI credit',st.credit_price,'settings',0.001)}
+      ${txt('as_at','Figures as at',st.as_at,'settings')}
+    </div>
+    <div style="margin-top:16px">${poolGauge(d.poolUtil, d.projUtil)}</div>
+    <div class="grid g4" style="margin-top:12px">
+      ${mini('Headroom', fmtN(st.pool_entitlement - st.pool_consumed))}
+      ${mini('Run rate / day', fmtN(d.runRate))}
+      ${mini('Projected utilisation', fmtP(d.projUtil))}
+      ${mini('Projected additional usage', fmtM(d.projSpend), d.projSpend>0?'bad':'good')}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>By product</h2>
+    <p class="sub">Group by: Products. Fields follow the console exactly.</p>
+    ${editTable('aiProduct',
+      [['product','Product','text'],['included_credits','included_credits','num'],
+       ['additional_credits','additional_credits','num'],['gross_amount','gross_amount','money'],
+       ['additional_usage','additional_usage','money']],
+      {total:true})}
+  </div>
+
+  <div class="card">
+    <h2>By cost centre</h2>
+    <p class="sub">Group by: Cost centers. Credits and gross amount feed Chargeback directly.</p>
+    ${editTable('centres',
+      [['cost_center_name','Cost centre','text',true],['funding_tier','Tier','tier'],
+       ['included_credits','included_credits','num'],['additional_credits','additional_credits','num'],
+       ['gross_amount','gross_amount','money'],['additional_usage','additional_usage','money']],
+      {total:true, oit:true})}
+    <div class="grid g3" style="margin-top:12px">
+      ${mini('Total credits', fmtN2(cTot))}
+      ${mini('OIT funded', fmtM(d.aiOitGross), 'oit')}
+      ${mini('OU funded', fmtM(d.aiOuGross), 'good')}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>By model</h2>
+    <p class="sub">Group by: Models. The chart view names the models but does not expose their figures —
+      take these from the AI usage CSV.</p>
+    ${editTable('aiModel',
+      [['model','Model','text'],['included_credits','included_credits','num'],
+       ['additional_credits','additional_credits','num'],['gross_amount','gross_amount','money'],
+       ['additional_usage','additional_usage','money']],
+      {total:true})}
+  </div>
+
+  <div class="card">
+    <h2>Reconciliation</h2>
+    <p class="sub">Each grouping is entered from its own console view, so these are snapshots taken moments apart.
+      Within 1% is normal; beyond that is a transcription error.</p>
+    <div class="tw"><table>
+      <thead><tr><th>Grouping</th><th class="num">Credits</th><th class="num">Variance</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>Pool panel</td><td class="num">${fmtN2(st.pool_consumed)}</td><td class="num">—</td><td></td></tr>
+        ${tieRow('By product', pTot)}
+        ${tieRow('By cost centre', cTot)}
+        ${tieRow('By model', mTot)}
+      </tbody></table></div>
+  </div>`;
+}
+
+/* ---------- Usage data ---------- */
+function viewUsage(d){
+  const rows = S.usage.slice(0, 400);
+  const cols = ['date','product','sku','quantity','unit_type','applied_cost_per_quantity',
+                'gross_amount','discount_amount','net_amount','organization','repository',
+                'username','cost_center_name'];
+  return `
+  <div class="card">
+    <h2>Import the usage report</h2>
+    <p class="sub">Billing and licensing › Usage › Get usage report. Paste the CSV below, headers included.
+      Column names are matched to GitHub's schema automatically, so camelCase exports work unchanged.</p>
+    <textarea id="usagePaste" placeholder="date,product,sku,quantity,unit_type,applied_cost_per_quantity,gross_amount,discount_amount,net_amount,organization,repository,username,cost_center_name
+2026-11-09,actions,actions_linux,61200,minutes,0.006,367.20,91.80,275.40,cms-platform,cms-platform/api-gateway,,Power Users"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary" id="btnImportUsage">Import rows</button>
+      <button class="btn" id="btnAppendUsage">Append to existing</button>
+      <button class="btn" id="btnClearUsage">Clear all rows</button>
+      <button class="btn" id="btnExportUsage">Export as CSV</button>
+      <span class="grow"></span>
+      <span class="pill">${fmtN(S.usage.length)} rows loaded</span>
+    </div>
+    <div id="importMsg" class="hint"></div>
+  </div>
+
+  <div class="grid g4" style="margin-bottom:16px">
+    ${tile('gross_amount', fmtM(d.gross), 'before discount')}
+    ${tile('discount_amount', fmtM(d.discount), 'enterprise agreement')}
+    ${tile('net_amount', fmtM(d.net), 'what is billed')}
+    ${tile('Rows failing price check', fmtN(d.checkFails),
+       'quantity × price vs gross_amount', d.checkFails?'bad':'good')}
+  </div>
+
+  <div class="card">
+    <h2>Rows</h2>
+    <p class="sub">Showing the first ${fmtN(Math.min(400,S.usage.length))} of ${fmtN(S.usage.length)}.
+      billing_class is derived from the rate card, not from the export.</p>
+    ${S.usage.length ? `<div class="tw scroll"><table><thead><tr>
+      ${cols.map(c=>`<th class="${['quantity','applied_cost_per_quantity','gross_amount','discount_amount','net_amount'].includes(c)?'num':''}">${c}</th>`).join('')}
+      <th>billing_class</th><th>check</th></tr></thead><tbody>
+      ${rows.map(u => {
+        const expect = (+u.quantity||0)*(+u.applied_cost_per_quantity||0);
+        const bad = Math.abs(expect-(+u.gross_amount||0))>0.05;
+        const cl = classFor(u.sku);
+        return `<tr>
+          <td class="mono">${esc(u.date)}</td><td>${esc(u.product)}</td><td class="mono">${esc(u.sku)}</td>
+          <td class="num">${fmtN(+u.quantity||0)}</td><td class="muted">${esc(u.unit_type)}</td>
+          <td class="num">${fmtR(+u.applied_cost_per_quantity||0)}</td>
+          <td class="num">${fmtM(+u.gross_amount||0)}</td><td class="num">${fmtM(+u.discount_amount||0)}</td>
+          <td class="num">${fmtM(+u.net_amount||0)}</td>
+          <td class="muted">${esc(u.organization)}</td><td class="muted">${esc(u.repository)}</td>
+          <td class="muted">${esc(u.username)}</td><td>${esc(u.cost_center_name)||'<span class="tag bad">unallocated</span>'}</td>
+          <td><span class="tag ${cl==='AI'?'oit':cl==='Seat'?'flat':'flat'}">${cl}</span></td>
+          <td><span class="tag ${bad?'bad':'good'}">${bad?'check':'ok'}</span></td></tr>`;
+      }).join('')}</tbody></table></div>`
+      : '<p class="muted">No rows yet. Paste the usage report above, or work from the AI usage tab alone.</p>'}
+  </div>`;
+}
+
+/* ---------- User budgets ---------- */
+function viewUsers(d){
+  const st = S.settings;
+  const sorted = [...d.users].sort((a,b)=>b.pct-a.pct);
+  const sTag = s => s==='At/over 100%'?'bad':s==='90-99%'?'warn':s==='80-89%'?'warn':'good';
+  return `
+  <div class="card">
+    <h2>Budget rules and automation</h2>
+    <p class="sub">A user's effective budget comes from their cost centre when it grants one, otherwise from the
+      enterprise default. When someone on the default reaches the trigger, the automation moves them to the target team.</p>
+    <div class="row">
+      ${num('ent_default_budget','Enterprise default ($/user/mo)',st.ent_default_budget,'settings',1)}
+      ${num('trigger_pct','Trigger at % of budget',st.trigger_pct,'settings',0.05)}
+      ${txt('target_team','Target enterprise team',st.target_team,'settings')}
+      ${num('automation_added','Added today',st.automation_added,'settings',1)}
+      ${num('automation_manual','Needing manual action',st.automation_manual,'settings',1)}
+      ${num('automation_uplifted','Users newly on higher budget',st.automation_uplifted,'settings',1)}
+    </div>
+    <div class="grid g4" style="margin-top:14px">
+      ${mini('Trigger amount', fmtM(d.trigAmt), 'warn')}
+      ${mini('Budget uplift per user', fmtM(d.uplift))}
+      ${mini('Users past the trigger now', fmtN(d.triggered), d.triggered?'warn':'good')}
+      ${mini('Max added spend this period', fmtM(d.exposure), 'warn')}
+    </div>
+  </div>
+
+  <div class="grid g4" style="margin-bottom:16px">
+    ${tile('At or over 100%', fmtN(d.over100), 'capped', d.over100?'bad':'good')}
+    ${tile('90–99%', fmtN(d.b90), 'watch list', d.b90?'warn':'good')}
+    ${tile('80–89%', fmtN(d.b80), 'automation band', d.b80?'warn':'good')}
+    ${tile('No enterprise team', fmtN(d.noTeam), 'on the default', d.noTeam?'warn':'good')}
+  </div>
+
+  <div class="card">
+    <h2>Import active users</h2>
+    <p class="sub">Paste the Active Users sheet of the daily budget report. % of budget, remaining and
+      MTD AI credits are recomputed here rather than trusted from the paste.</p>
+    <textarea id="userPaste" placeholder="GitHub Login,Enterprise Team(s),Cost Center(s),Effective Budget ($/mo),Budget Source,MTD Spend ($),28-Day Spend ($),Active Days (28d),Last Active,Interactions (28d),Used Agent,Used Chat,IDEs
+brentthayer1,ent:power-users,Power Users,200.00,Cost center: Power Users,45.11,58.30,8,2026-11-09,319,Yes,Yes,vscode"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary" id="btnImportUsers">Import users</button>
+      <button class="btn" id="btnClearUsers">Clear</button>
+      <button class="btn" id="btnExportUsers">Export as CSV</button>
+      <span class="grow"></span><span class="pill">${fmtN(S.users.length)} users</span>
+    </div>
+    <div id="userMsg" class="hint"></div>
+  </div>
+
+  <div class="card">
+    <h2>Active users — budget vs spend</h2>
+    <p class="sub">Sorted by share of budget consumed. Total MTD ${fmtM(d.userMtd)}, 28-day ${fmtM(d.user28)}.</p>
+    <div class="tw scroll"><table>
+      <thead><tr><th>GitHub login</th><th>Enterprise team(s)</th><th>Cost centre</th>
+        <th class="num">Effective budget</th><th>Budget source</th><th class="num">MTD spend</th>
+        <th class="num">% of budget</th><th class="num">Remaining</th><th class="num">28-day spend</th>
+        <th class="num">MTD AI credits</th><th class="num">Active days</th><th>Last active</th>
+        <th class="num">Interactions</th><th>Agent</th><th>Chat</th><th>IDEs</th>
+        <th>Status</th><th>Trigger</th></tr></thead>
+      <tbody>${sorted.map(u=>`<tr>
+        <td class="mono">${esc(u.username)}</td>
+        <td class="muted">${esc(u.enterprise_teams)||'<span class="tag warn">no team</span>'}</td>
+        <td>${esc(u.cost_center_name)}</td>
+        <td class="num">${fmtM(+u.effective_budget||0)}</td>
+        <td class="muted">${esc(u.budget_source)}</td>
+        <td class="num">${fmtM(+u.mtd_spend||0)}</td>
+        <td class="num">${fmtP(u.pct)}</td>
+        <td class="num">${fmtM(u.remaining)}</td>
+        <td class="num">${fmtM(+u.spend_28d||0)}</td>
+        <td class="num">${fmtN(u.aic_quantity)}</td>
+        <td class="num">${fmtN(+u.active_days||0)}</td>
+        <td class="mono">${esc(u.last_active)}</td>
+        <td class="num">${fmtN(+u.interactions||0)}</td>
+        <td>${u.used_agent?'Yes':''}</td><td>${u.used_chat?'Yes':''}</td>
+        <td class="muted">${esc(u.ides)}</td>
+        <td><span class="tag ${sTag(u.status)}">${u.status}</span></td>
+        <td>${u.trigger?'<span class="tag warn">Yes</span>':''}</td></tr>`).join('')}</tbody></table></div>
+  </div>
+
+  <div class="card">
+    <h2>By budget source</h2>
+    <p class="sub">As reported by the daily report, with a live count of matching rows in the loaded users.</p>
+    ${editTable('sources',
+      [['budget_source','Budget source','text',true],['effective_budget','Budget ($/user/mo)','money'],
+       ['active_users','Active users','num'],['mtd_spend','MTD spend ($)','money'],
+       ['at_over','At/over 100%','num']],
+      {total:true, extra:r => fmtN(S.users.filter(u=>u.budget_source===r.budget_source).length),
+       extraHead:'Loaded rows'})}
+    <div class="note">A cost centre that grants no AI-credit budget does not block its users — they fall back to
+      the enterprise default. Give a centre a budget on the Cost centres tab to take it off the default.</div>
+  </div>`;
+}
+
+/* ---------- Cost centres ---------- */
+function viewCentres(d){
+  return `
+  <div class="card">
+    <h2>Cost centre register</h2>
+    <p class="sub">Mirrors Billing and licensing › Cost centers. Funding tier and budgets are yours to set;
+      scope and AI figures come from the console.</p>
+    ${editTable('centres',
+      [['cost_center_name','Cost centre','text',true],['scope_type','Scope','text'],
+       ['scope_detail','Scope detail','text'],['funding_tier','Funding tier','tier'],
+       ['ai_credit_budget','AI credit budget ($/user/mo)','money'],
+       ['monthly_budget','Monthly budget ($)','money'],
+       ['pool_used','Own pool used','num'],['pool_limit','Own pool limit','num']],
+      {oit:true, extra:r => r.ai_credit_budget>0
+          ? `<span class="tag good">Cost center: ${esc(r.cost_center_name)}</span>`
+          : '<span class="tag flat">Enterprise default</span>',
+       extraHead:'Budget source for its users'})}
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="btnAddCentre">Add a cost centre</button>
+      <button class="btn" id="btnExportCentres">Export as CSV</button>
+    </div>
+    <div class="note warn">Funding tier was inferred from naming, not confirmed. It currently splits
+      ${fmtM(d.aiOitGross)} to OIT and ${fmtM(d.aiOuGross)} to OUs. Confirm before circulating any chargeback.</div>
+  </div>`;
+}
+
+/* ---------- Chargeback ---------- */
+function viewChargeback(d){
+  const cb = d.chargeback;
+  const tot = cb.reduce((a,c)=>({seat:a.seat+c.seat, metered:a.metered+c.metered,
+    ai:a.ai+c.ai, total:a.total+c.total, budget:a.budget+c.budget}),
+    {seat:0,metered:0,ai:0,total:0,budget:0});
+  const sTag = s => s==='Over budget'?'bad':s==='Near limit'?'warn':s==='No budget set'?'flat':'good';
+  return `
+  <div class="card">
+    <h2>Chargeback by cost centre</h2>
+    <p class="sub">Seat and metered spend come from imported usage rows matched on cost_center_name.
+      AI gross comes from the AI usage tab.</p>
+    <div class="tw"><table>
+      <thead><tr><th>Cost centre</th><th>Tier</th><th class="num">Seat</th><th class="num">Metered</th>
+        <th class="num">AI gross</th><th class="num">Total</th><th class="num">Budget</th>
+        <th class="num">% of budget</th><th>Status</th></tr></thead>
+      <tbody>${cb.map(c=>`<tr class="${c.funding_tier==='OIT'?'oitrow':''}">
+        <td>${esc(c.cost_center_name)}</td>
+        <td><span class="tag ${c.funding_tier==='OIT'?'oit':'flat'}">${esc(c.funding_tier)}</span></td>
+        <td class="num">${fmtM(c.seat)}</td><td class="num">${fmtM(c.metered)}</td>
+        <td class="num">${fmtM(c.ai)}</td><td class="num"><strong>${fmtM(c.total)}</strong></td>
+        <td class="num">${c.budget?fmtM0(c.budget):'—'}</td>
+        <td class="num">${c.budget?fmtP(c.pctBudget):'—'}</td>
+        <td><span class="tag ${sTag(c.status)}">${c.status}</span></td></tr>`).join('')}
+        <tr class="total"><td>Total</td><td></td><td class="num">${fmtM(tot.seat)}</td>
+          <td class="num">${fmtM(tot.metered)}</td><td class="num">${fmtM(tot.ai)}</td>
+          <td class="num">${fmtM(tot.total)}</td><td class="num">${fmtM0(tot.budget)}</td>
+          <td class="num">${tot.budget?fmtP(tot.total/tot.budget):'—'}</td><td></td></tr>
+      </tbody></table></div>
+    <div class="grid g3" style="margin-top:14px">
+      ${mini('Funded centrally by OIT',
+        fmtM(cb.filter(c=>c.funding_tier==='OIT').reduce((a,c)=>a+c.total,0)),'oit')}
+      ${mini('Recoverable from OUs',
+        fmtM(cb.filter(c=>c.funding_tier==='OU').reduce((a,c)=>a+c.total,0)),'good')}
+      ${mini('Unallocated rows', fmtM(d.unallocTotal), d.unallocTotal>0?'bad':'good')}
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" id="btnExportCb">Export chargeback as CSV</button>
+    </div>
+    ${d.unallocTotal>0?`<div class="note warn">${fmtM(d.unallocTotal)} of usage carries no cost_center_name.
+      That spend is unrecoverable until those rows are mapped.</div>`:''}
+  </div>`;
+}
+
+/* ---------- Rate card ---------- */
+function viewRates(){
+  const st = S.settings;
+  const groups = {};
+  S.skus.forEach(s => { (groups[s.product] = groups[s.product] || []).push(s); });
+  return `
+  <div class="card">
+    <h2>SKU rate card</h2>
+    <p class="sub">GitHub list prices in USD. applied_cost_per_quantity is the list rate less the enterprise
+      discount, and every calculation in the app uses it.</p>
+    <div class="row">
+      ${num('discount','Discount off list',st.discount,'settings',0.01)}
+      <div class="grow"></div>
+      <button class="btn" id="btnExportRates">Export as CSV</button>
+    </div>
+    <div class="hint">Changing the discount recalculates the estimator, the usage check and every derived rate.</div>
+  </div>
+  ${Object.entries(groups).map(([prod, list]) => `
+  <div class="card">
+    <h2>${esc(prod)}</h2>
+    <div class="tw"><table>
+      <thead><tr><th>sku</th><th>Description</th><th>unit_type</th><th>billing_class</th>
+        <th class="num">list_rate</th><th class="num">applied_cost_per_quantity</th></tr></thead>
+      <tbody>${list.map(s=>{
+        const i = S.skus.indexOf(s);
+        return `<tr><td class="mono">${esc(s.sku)}</td><td>${esc(s.description)}</td>
+          <td class="muted">${esc(s.unit_type)}</td>
+          <td><span class="tag ${s.billing_class==='AI'?'oit':'flat'}">${s.billing_class}</span></td>
+          <td class="num"><input type="number" step="0.000001" value="${s.list_rate}"
+             data-coll="skus" data-i="${i}" data-f="list_rate" style="width:110px"></td>
+          <td class="num">${fmtR(s.list_rate*(1-st.discount))}</td></tr>`;
+      }).join('')}</tbody></table></div>
+  </div>`).join('')}`;
+}
+
+/* ---------- Estimator ---------- */
+function viewEstimate(){
+  const e = S.estimate, st = S.settings;
+  const allow = PLAN_ALLOWANCE[e.plan] || {};
+  const seatRows = Object.keys(e.seats).map(sku => {
+    const qty = +e.seats[sku]||0, rate = rateFor(sku);
+    return {sku, qty, rate, cost: qty*rate, credits: (CREDITS_PER_SEAT[sku]||0)*qty};
+  });
+  const pool = seatRows.reduce((a,r)=>a+r.credits,0);
+  const usageRows = Object.keys(e.usage).map(sku => {
+    const qty = +e.usage[sku]||0;
+    const inc = sku === 'copilot_ai_credit' ? pool : (allow[sku]||0);
+    const billable = Math.max(0, qty - inc), rate = rateFor(sku);
+    return {sku, qty, inc, billable, rate, cost: billable*rate};
+  });
+  const seatTotal = seatRows.reduce((a,r)=>a+r.cost,0);
+  const usageTotal = usageRows.reduce((a,r)=>a+r.cost,0);
+  const cont = usageTotal * (+e.contingency||0);
+  const monthly = seatTotal + usageTotal + cont;
+
+  return `
+  <div class="card">
+    <h2>Cost estimator</h2>
+    <p class="sub">Forward-looking. Seats and usage are priced from the rate card at the current discount,
+      with plan allowances deducted.</p>
+    <div class="row">
+      <div class="grow"><label class="fld">GitHub plan</label>
+        <select data-coll="estimate" data-f="plan">
+          ${Object.keys(PLAN_ALLOWANCE).map(p=>`<option ${p===e.plan?'selected':''}>${p}</option>`).join('')}
+        </select></div>
+      ${num('term','Term (months)',e.term,'estimate',1)}
+      ${num('contingency','Usage contingency',e.contingency,'estimate',0.05)}
+      <div class="grow"></div>
+      <button class="btn" id="btnExportEst">Export as CSV</button>
+    </div>
+  </div>
+
+  <div class="grid g4" style="margin-bottom:16px">
+    ${tile('Seats and subscriptions', fmtM0(seatTotal), 'per month')}
+    ${tile('Metered usage', fmtM0(usageTotal), 'after allowances')}
+    ${tile('Monthly total', fmtM0(monthly), 'including contingency')}
+    ${tile('Term total', fmtM0(monthly*(+e.term||0)), `${e.term} months`)}
+  </div>
+
+  <div class="card">
+    <h2>Seats</h2>
+    <div class="tw"><table>
+      <thead><tr><th>sku</th><th class="num">Quantity</th><th class="num">applied rate</th>
+        <th class="num">Monthly cost</th><th class="num">AI credits contributed</th></tr></thead>
+      <tbody>${seatRows.map(r=>`<tr>
+        <td class="mono">${esc(r.sku)}</td>
+        <td class="num"><input type="number" step="1" value="${r.qty}" data-est="seats"
+            data-f="${r.sku}" style="width:95px"></td>
+        <td class="num">${fmtM(r.rate)}</td><td class="num">${fmtM(r.cost)}</td>
+        <td class="num">${r.credits?fmtN(r.credits):'—'}</td></tr>`).join('')}
+        <tr class="total"><td>Total</td><td></td><td></td><td class="num">${fmtM(seatTotal)}</td>
+          <td class="num">${fmtN(pool)}</td></tr></tbody></table></div>
+    <div class="hint">Copilot seats pool their AI credits enterprise-wide, so the pool below grows with seat count.</div>
+  </div>
+
+  <div class="card">
+    <h2>Metered usage</h2>
+    <div class="tw"><table>
+      <thead><tr><th>sku</th><th class="num">Quantity / month</th><th class="num">Included</th>
+        <th class="num">Billable</th><th class="num">applied rate</th><th class="num">Monthly cost</th></tr></thead>
+      <tbody>${usageRows.map(r=>`<tr>
+        <td class="mono">${esc(r.sku)}</td>
+        <td class="num"><input type="number" step="1" value="${r.qty}" data-est="usage"
+            data-f="${r.sku}" style="width:110px"></td>
+        <td class="num">${r.inc?fmtN(r.inc):'—'}</td><td class="num">${fmtN(r.billable)}</td>
+        <td class="num">${fmtR(r.rate)}</td><td class="num">${fmtM(r.cost)}</td></tr>`).join('')}
+        <tr><td>Usage contingency</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>
+          <td class="num">${fmtP(+e.contingency||0)}</td><td class="num">${fmtM(cont)}</td></tr>
+        <tr class="total"><td>Total</td><td></td><td></td><td></td><td></td>
+          <td class="num">${fmtM(usageTotal+cont)}</td></tr></tbody></table></div>
+    <div class="note">Included Actions minutes are a single Linux-equivalent pool — Windows burns them at 2×
+      and macOS at 10×, and larger runners cannot touch them at all. The allowance here is shown against the
+      standard Linux runner only.</div>
+  </div>`;
+}
+
+/* ---------- editable table helper ---------- */
+function editTable(coll, cols, opts){
+  opts = opts || {};
+  const rows = S[coll];
+  const numCols = cols.filter(c => c[2]==='num' || c[2]==='money').map(c=>c[0]);
+  const totals = {};
+  numCols.forEach(f => totals[f] = rows.reduce((a,r)=>a+(+r[f]||0),0));
+  return `<div class="tw"><table>
+    <thead><tr>${cols.map(c=>`<th class="${c[2]==='num'||c[2]==='money'?'num':''}">${esc(c[1])}</th>`).join('')}
+      ${opts.extraHead?`<th>${esc(opts.extraHead)}</th>`:''}
+      ${opts.remove?'<th></th>':''}</tr></thead>
+    <tbody>${rows.map((r,i)=>`<tr class="${opts.oit&&r.funding_tier==='OIT'?'oitrow':''}">
+      ${cols.map(c=>{
+        const [f,,type,ro] = c;
+        if (type==='tier') return `<td><select data-coll="${coll}" data-i="${i}" data-f="${f}">
+          <option ${r[f]==='OIT'?'selected':''}>OIT</option>
+          <option ${r[f]==='OU'?'selected':''}>OU</option></select></td>`;
+        if (type==='text') return ro
+          ? `<td>${esc(r[f])}</td>`
+          : `<td><input type="text" value="${esc(r[f])}" data-coll="${coll}" data-i="${i}" data-f="${f}"></td>`;
+        const step = type==='money' ? '0.01' : '0.01';
+        return `<td class="num"><input type="number" step="${step}" value="${+r[f]||0}"
+          data-coll="${coll}" data-i="${i}" data-f="${f}" style="width:120px"></td>`;
+      }).join('')}
+      ${opts.extraHead?`<td>${opts.extra(r)}</td>`:''}
+      ${opts.remove?`<td><button class="btn sm" data-del="${coll}" data-i="${i}">Remove</button></td>`:''}
+    </tr>`).join('')}
+    ${opts.total?`<tr class="total">${cols.map((c,j)=>{
+      const [f,,type] = c;
+      if (j===0) return '<td>Total</td>';
+      if (type==='num') return `<td class="num">${fmtN2(totals[f])}</td>`;
+      if (type==='money') return `<td class="num">${fmtM(totals[f])}</td>`;
+      return '<td></td>';
+    }).join('')}${opts.extraHead?'<td></td>':''}${opts.remove?'<td></td>':''}</tr>`:''}
+    </tbody></table></div>`;
+}
+function num(field, label, val, coll, step){
+  return `<div class="grow"><label class="fld">${esc(label)}</label>
+    <input type="number" step="${step||1}" value="${val}" data-coll="${coll}" data-f="${field}"></div>`;
+}
+function txt(field, label, val, coll){
+  return `<div class="grow"><label class="fld">${esc(label)}</label>
+    <input type="text" value="${esc(val)}" data-coll="${coll}" data-f="${field}"></div>`;
+}
+
+/* ===================== export ===================== */
+function toCSV(rows, cols){
+  const q = v => {
+    const s = String(v==null?'':v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  };
+  return [cols.join(','), ...rows.map(r => cols.map(c => q(r[c])).join(','))].join('\n');
+}
+async function download(filename, text){
+  try {
+    const dl = await claude.use('downloads');
+    if (dl) { await dl.save({filename, data: text}); return; }
+  } catch(e){}
+  try {
+    const blob = new Blob([text], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+  } catch(e){ alert('Download is not available in this view.'); }
+}
+
+/* ===================== wiring ===================== */
+function render(){
+  const d = compute();
+  renderChrome();
+  renderTabs();
+  const map = {
+    overview: viewOverview, ai: viewAI, usage: viewUsage, users: viewUsers,
+    centres: viewCentres, chargeback: viewChargeback, rates: viewRates, estimate: viewEstimate
+  };
+  TABS.forEach(([id]) => {
+    const el = document.getElementById('p-' + id);
+    el.hidden = id !== active;
+    if (id === active) el.innerHTML = map[id](d);
+  });
+  window.scrollTo({top:0});
+}
+
+document.addEventListener('click', e => {
+  const tab = e.target.closest('[data-tab]');
+  if (tab){ active = tab.dataset.tab; render(); return; }
+
+  const del = e.target.closest('[data-del]');
+  if (del){ S[del.dataset.del].splice(+del.dataset.i, 1); save(); render(); return; }
+
+  const id = e.target.id;
+  if (!id) return;
+
+  if (id === 'btnTheme'){
+    const cur = document.documentElement.getAttribute('data-theme');
+    const next = cur === 'dark' ? 'light' : cur === 'light' ? '' : 'dark';
+    if (next) document.documentElement.setAttribute('data-theme', next);
+    else document.documentElement.removeAttribute('data-theme');
+    return;
+  }
+  if (id === 'btnReset'){
+    if (confirm('Clear everything stored in this browser and reload the seeded data?')){
+      localStorage.removeItem(KEY); S = seed(); render();
+    }
+    return;
+  }
+
+  if (id === 'btnImportUsage' || id === 'btnAppendUsage'){
+    const rows = parseDelimited(document.getElementById('usagePaste').value);
+    const msg = document.getElementById('importMsg');
+    if (rows.length < 2){ msg.textContent = 'Nothing to import — paste the CSV including its header row.'; return; }
+    const map = buildMap(rows[0], USAGE_FIELDS);
+    if (map.sku === undefined){ msg.textContent = 'No sku column found. Check the header row.'; return; }
+    const out = rows.slice(1).map(r => {
+      const o = {};
+      Object.keys(USAGE_FIELDS).forEach(f => { o[f] = map[f] !== undefined ? (r[map[f]]||'').trim() : ''; });
+      ['quantity','applied_cost_per_quantity','gross_amount','discount_amount','net_amount','aic_quantity']
+        .forEach(f => o[f] = toNum(o[f]));
+      if (!o.net_amount && o.gross_amount) o.net_amount = o.gross_amount - o.discount_amount;
+      o.exceeds_quota = toBool(o.exceeds_quota);
+      return o;
+    }).filter(o => o.sku);
+    S.usage = id === 'btnAppendUsage' ? S.usage.concat(out) : out;
+    save();
+    const missing = Object.keys(USAGE_FIELDS).filter(f => map[f] === undefined);
+    msg.textContent = `Imported ${out.length} rows.` + (missing.length ? ` Columns not present: ${missing.join(', ')}.` : '');
+    render(); return;
+  }
+  if (id === 'btnClearUsage'){ S.usage = []; save(); render(); return; }
+
+  if (id === 'btnImportUsers'){
+    const rows = parseDelimited(document.getElementById('userPaste').value);
+    const msg = document.getElementById('userMsg');
+    if (rows.length < 2){ msg.textContent = 'Nothing to import — include the header row.'; return; }
+    const map = buildMap(rows[0], USER_FIELDS);
+    if (map.username === undefined){ msg.textContent = 'No GitHub Login column found.'; return; }
+    const out = rows.slice(1).map(r => {
+      const g = f => map[f] !== undefined ? (r[map[f]]||'').trim() : '';
+      return {username:g('username'), enterprise_teams:g('enterprise_teams'),
+              cost_center_name:g('cost_center_name'),
+              effective_budget:toNum(g('effective_budget')), budget_source:g('budget_source'),
+              mtd_spend:toNum(g('mtd_spend')), spend_28d:toNum(g('spend_28d')),
+              active_days:toNum(g('active_days')), last_active:g('last_active'),
+              interactions:toNum(g('interactions')), used_agent:toBool(g('used_agent')),
+              used_chat:toBool(g('used_chat')), ides:g('ides')};
+    }).filter(o => o.username);
+    S.users = out; save();
+    msg.textContent = `Imported ${out.length} users.`;
+    render(); return;
+  }
+  if (id === 'btnClearUsers'){ S.users = []; save(); render(); return; }
+  if (id === 'btnAddCentre'){
+    S.centres.push({cost_center_name:'New cost centre', scope_type:'Enterprise Team',
+      scope_detail:'', funding_tier:'OU', ai_credit_budget:0, monthly_budget:0,
+      included_credits:0, additional_credits:0, gross_amount:0, additional_usage:0,
+      pool_used:0, pool_limit:0});
+    save(); render(); return;
+  }
+
+  const d = compute();
+  if (id === 'btnExportUsage')
+    download(`github_usage_${S.settings.period}.csv`,
+      toCSV(S.usage, ['date','product','sku','quantity','unit_type','applied_cost_per_quantity',
+        'gross_amount','discount_amount','net_amount','organization','repository','username','cost_center_name']));
+  if (id === 'btnExportUsers')
+    download(`copilot_user_budgets_${S.settings.period}.csv`,
+      toCSV(d.users.map(u=>({...u, pct_of_budget:(u.pct*100).toFixed(1)+'%'})),
+        ['username','enterprise_teams','cost_center_name','effective_budget','budget_source',
+         'mtd_spend','pct_of_budget','remaining','spend_28d','aic_quantity','active_days',
+         'last_active','interactions','used_agent','used_chat','ides','status']));
+  if (id === 'btnExportCentres')
+    download('github_cost_centers.csv',
+      toCSV(S.centres, ['cost_center_name','scope_type','scope_detail','funding_tier',
+        'ai_credit_budget','monthly_budget','included_credits','additional_credits',
+        'gross_amount','additional_usage','pool_used','pool_limit']));
+  if (id === 'btnExportRates')
+    download('github_sku_rate_card.csv',
+      toCSV(S.skus.map(s=>({...s, applied_cost_per_quantity:+(s.list_rate*(1-S.settings.discount)).toFixed(6)})),
+        ['product','sku','description','unit_type','billing_class','list_rate','applied_cost_per_quantity']));
+  if (id === 'btnExportCb')
+    download(`github_chargeback_${S.settings.period}.csv`,
+      toCSV(d.chargeback.map(c=>({cost_center_name:c.cost_center_name, funding_tier:c.funding_tier,
+        seat_spend:c.seat.toFixed(2), metered_spend:c.metered.toFixed(2), ai_gross_amount:c.ai.toFixed(2),
+        total:c.total.toFixed(2), monthly_budget:c.budget, status:c.status})),
+        ['cost_center_name','funding_tier','seat_spend','metered_spend','ai_gross_amount','total','monthly_budget','status']));
+  if (id === 'btnExportEst'){
+    const e = S.estimate;
+    const rows = Object.keys(e.seats).map(sku=>({type:'seat', sku, quantity:e.seats[sku],
+        applied_cost_per_quantity:rateFor(sku).toFixed(6),
+        monthly_cost:((+e.seats[sku]||0)*rateFor(sku)).toFixed(2)}))
+      .concat(Object.keys(e.usage).map(sku=>({type:'metered', sku, quantity:e.usage[sku],
+        applied_cost_per_quantity:rateFor(sku).toFixed(6),
+        monthly_cost:(Math.max(0,(+e.usage[sku]||0))*rateFor(sku)).toFixed(2)})));
+    download('github_cost_estimate.csv', toCSV(rows,
+      ['type','sku','quantity','applied_cost_per_quantity','monthly_cost']));
+  }
+});
+
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.est){
+    S.estimate[t.dataset.est][t.dataset.f] = toNum(t.value);
+    save(); scheduleRender(); return;
+  }
+  const coll = t.dataset.coll, f = t.dataset.f;
+  if (!coll || !f) return;
+  const val = t.type === 'number' ? toNum(t.value) : t.value;
+  if (t.dataset.i !== undefined) S[coll][+t.dataset.i][f] = val;
+  else if (coll === 'settings' || coll === 'estimate') S[coll][f] = val;
+  save(); scheduleRender();
+});
+document.addEventListener('change', e => {
+  if (e.target.tagName === 'SELECT') {
+    const t = e.target, coll = t.dataset.coll, f = t.dataset.f;
+    if (!coll || !f) return;
+    if (t.dataset.i !== undefined) S[coll][+t.dataset.i][f] = t.value;
+    else S[coll][f] = t.value;
+    save(); render();
+  }
+});
+
+/* rerender without stealing focus from the field being typed in */
+let rt;
+function scheduleRender(){
+  clearTimeout(rt);
+  rt = setTimeout(() => {
+    const a = document.activeElement;
+    const key = a && a.dataset ? [a.dataset.coll, a.dataset.i, a.dataset.f, a.dataset.est].join('|') : null;
+    const pos = a && a.selectionStart;
+    render();
+    if (key){
+      const sel = [...document.querySelectorAll('input,select')].find(el =>
+        [el.dataset.coll, el.dataset.i, el.dataset.f, el.dataset.est].join('|') === key);
+      if (sel){ sel.focus(); try { sel.setSelectionRange(pos, pos); } catch(err){} }
+    }
+  }, 420);
+}
+
+S = load();
+render();
+</script>
+</body>
+</html>
